@@ -39,6 +39,7 @@ def read_records(lines):
 
 
 def average(marks):
+    """Средний балл, округлённый до сотых."""
     return round(sum(marks) / len(marks), 2)
 
 
