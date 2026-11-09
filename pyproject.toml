@@ -1,0 +1,18 @@
+[project]
+name = "python-structured-programming-course"
+version = "2.0.0"
+description = "Курс по структурному программированию: 7 задач с открытыми и контрольными тестами"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib -p no:cacheprovider"
+testpaths = ["tasks"]
+markers = ["category(name): категория тест-кейса (typical, naive, edge, format, fuzz)"]
+
+[tool.coverage.run]
+branch = true
+omit = ["*/tests/*", "*conftest.py"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = ["if __name__ == .__main__.:"]
