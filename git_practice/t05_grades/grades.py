@@ -18,6 +18,7 @@ class GradesError(ValueError):
 
 
 def parse_line(line):
+    """Строка ведомости → (имя, список оценок); ошибка - GradesError."""
     name, sep, rest = line.partition(":")
     name = " ".join(name.split())
     if not sep or not name:
