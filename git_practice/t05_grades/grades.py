@@ -73,6 +73,7 @@ def format_summary(records):
 
 
 def main(argv=None):
+    """Точка входа командной строки."""
     argv = sys.argv[1:] if argv is None else argv
     if len(argv) != 1:
         print("Запуск: python grades.py ведомость.txt", file=sys.stderr)
