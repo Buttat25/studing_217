@@ -45,10 +45,7 @@ def average(marks):
 
 def median(marks):
     ordered = sorted(marks)
-    middle = len(ordered) // 2
-    if len(ordered) % 2:
-        return float(ordered[middle])
-    return (ordered[middle - 1] + ordered[middle]) / 2
+    return float(ordered[len(ordered) // 2])
 
 
 def distribution(records):
