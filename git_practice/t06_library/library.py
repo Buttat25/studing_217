@@ -63,6 +63,7 @@ class Library:
         return max(overdue, 0) * FINE_PER_DAY
 
     def loans_of(self, reader):
+        """Книги, которые сейчас у читателя."""
         return sorted(isbn for isbn, who in self._loans if who == reader)
 
     def _check(self, isbn):
