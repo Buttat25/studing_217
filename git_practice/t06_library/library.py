@@ -24,6 +24,7 @@ class Library:
         self._loans = {}         # (isbn, читатель) → день выдачи
 
     def add_book(self, isbn, title, copies=1):
+        """Добавить книгу; повторный ISBN с тем же названием добавляет экземпляры."""
         if copies < 1:
             raise LibraryError("число экземпляров должно быть больше нуля")
         if isbn in self._titles and self._titles[isbn] != title:
