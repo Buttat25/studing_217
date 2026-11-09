@@ -1,6 +1,3 @@
-# Вспомогательный модуль открытых тестов. Сгенерировано — не редактируйте.
-# Ожидаемые ответы записаны в golden.json.gz.
-"""Независимая модель планировщика для тестов задачи 6 (не тест, вспомогательный модуль)."""
 from course_program import golden_lookup
 
 
@@ -26,13 +23,11 @@ plan = golden_lookup(__file__, "scheduler_model.plan")
 
 
 def task_file(deps, titles=None):
-    """Текст списка задач в формате условия (порядок строк — порядок словаря)."""
     titles = titles or {}
-    return "".join(f'Задача {t}: "{titles.get(t, "")}" — зависит от: {", ".join(d) if d else "—"}\n'
+    return "".join(f'Задача {t}: "{titles.get(t, "")}" - зависит от: {", ".join(d) if d else "-"}\n'
                    for t, d in deps.items())
 
 
 def is_cycle(deps, chain):
-    """chain — цикл графа: каждая задача зависит от следующей, первая повторяется в конце."""
     return (len(chain) >= 2 and chain[0] == chain[-1] and len(set(chain[:-1])) == len(chain) - 1
             and all(b in deps.get(a, ()) for a, b in zip(chain, chain[1:])))

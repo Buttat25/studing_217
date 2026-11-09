@@ -1,10 +1,3 @@
-# Открытые тесты для самопроверки. Сгенерировано из контрольных тестов —
-# не редактируйте: контрольные тесты преподавателя проверяют больше случаев.
-"""Задача 1. Расписание поездов: запуск программы, формат ввода и отчёта, проверка данных.
-
-Программа: python trains.py [ФАЙЛ]. Без аргумента расписание читается из stdin.
-Строка расписания: «Поезд 1: прибытие 09:00, отправление 09:30».
-"""
 import random
 
 import pytest
@@ -30,7 +23,6 @@ EXAMPLE_REPORT = """
 """
 
 
-# ============================================================ запуск
 @pytest.mark.category("typical")
 def test_example_from_stdin():
     assert_output(run(PROGRAM, stdin=EXAMPLE), EXAMPLE_REPORT)
@@ -56,7 +48,6 @@ def test_too_many_arguments():
     assert_error(run(PROGRAM, "a.txt", "b.txt", files={"a.txt": EXAMPLE, "b.txt": EXAMPLE}), code=2)
 
 
-# ============================================================ формат ввода
 @pytest.mark.category("typical")
 def test_spaces_and_case_do_not_matter():
     text = "  Экспресс  :  ПРИБЫТИЕ   9:05 ,Отправление 9:40  \nскорый 7:прибытие 09:20,отправление 10:00\n"
@@ -82,12 +73,12 @@ def test_comments_and_blank_lines_are_skipped():
 
 @pytest.mark.category("typical")
 def test_names_are_printed_as_given():
-    text = "Ласточка №7 (Москва — Тверь): прибытие 8:00, отправление 8:15\n"
+    text = "Ласточка №7 (Москва - Тверь): прибытие 8:00, отправление 8:15\n"
     assert_output(run(PROGRAM, stdin=text), """
         Минимальное количество платформ: 1
 
         Распределение по платформам:
-          Платформа 1: Ласточка №7 (Москва — Тверь) (08:00–08:15)
+          Платформа 1: Ласточка №7 (Москва - Тверь) (08:00–08:15)
     """)
 
 
@@ -133,7 +124,6 @@ def test_error_in_last_line_gives_no_report():
     assert "Минимальное количество" not in result.out
 
 
-# ============================================================ правила
 @pytest.mark.category("edge")
 @pytest.mark.parametrize("arrival, departure", [
     ("09:00", "11:00"), ("23:00", "01:00"), ("22:00", "24:00"), ("23:59", "01:59"), ("22:00", "00:00"),
@@ -225,7 +215,6 @@ def test_nested_intervals():
 @pytest.mark.category("fuzz")
 @pytest.mark.parametrize("seed", [1, 2, 3, 4])
 def test_random_small_schedules_count(seed):
-    """Число платформ — максимум поездов одновременно (поминутный подсчёт)."""
     rng = random.Random(seed)
     for _ in range(15):
         spans = []

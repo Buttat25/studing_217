@@ -1,11 +1,3 @@
-# Открытые тесты для самопроверки. Сгенерировано из контрольных тестов —
-# не редактируйте: контрольные тесты преподавателя проверяют больше случаев.
-"""Задача 5. Тест-кейсы 5.1–5.17: программа читает журнал и печатает отчёт.
-
-Программа: python eventlog.py ФАЙЛ [--bucket МИН] [--gap МИН].
-Ожидаемый отчёт строит независимая модель eventlog_model (её правильность закреплена
-дословными примерами в test_eventlog.py).
-"""
 import random
 from datetime import datetime, timedelta
 
@@ -35,11 +27,9 @@ def line(moment, kind, description="", sep=" | "):
     return f"{moment:%Y-%m-%d %H:%M:%S}{sep}{kind}" + (f"{sep}{description}" if description else "") + "\n"
 
 
-# ============================================================ 🟢 Типичные
 @pytest.mark.category("typical")
 @pytest.mark.parametrize("kind", ["VIEW", "login", "Error"])
 def test_5_1_hundred_lines_of_one_type(kind):
-    """5.1 100 корректных строк одного типа — 100% этого типа (тип приводится к верхнему регистру)."""
     data = "".join(line(START + timedelta(minutes=i), kind, f"n={i}") for i in range(100))
     check(data)
     assert_lines(analyze(data), f"  {kind.upper()}  : 100 (100.0%)")
@@ -48,20 +38,15 @@ def test_5_1_hundred_lines_of_one_type(kind):
 @pytest.mark.category("typical")
 @pytest.mark.parametrize("seed", [1, 2, 3])
 def test_5_2_mixed_types(seed):
-    """5.2 Смесь типов — точное распределение и доли (в порядке первого появления типа)."""
     rng = random.Random(seed)
     kinds = ["LOGIN", "VIEW", "CART", "PURCHASE", "ERROR", "LOGOUT"]
     data = "".join(line(START + timedelta(seconds=i * 37), rng.choice(kinds)) for i in range(rng.randint(5, 300)))
     check(data)
 
 
-# ============================================================ 🟡 Наивные
-
-
 @pytest.mark.category("naive")
 @pytest.mark.parametrize("data", ["", "\n\n\n", "   \n\t\n"])
 def test_5_5_empty_input(data):
-    """5.5 Пустой файл (или только пустые строки) — 0 событий, 0 битых строк."""
     check(data)
 
 
@@ -95,14 +80,11 @@ def test_5_5_empty_file_literal():
     "2026-11-05T00:00:00\tVIEW\n",
 ])
 def test_5_6_single_line(text):
-    """5.6 Одна строка — одно событие, статистика корректна."""
     check(text)
 
 
-# ============================================================ 🔴 Краевые
 @pytest.mark.category("edge")
 def test_5_7_big_file_is_streamed():
-    """5.7 Большой файл обрабатывается потоком: память не растёт вместе с размером файла."""
     rng = random.Random(7)
     kinds = ["LOGIN", "VIEW", "CART", "ERROR"]
     parts = []
@@ -114,13 +96,12 @@ def test_5_7_big_file_is_streamed():
     result = run(PROGRAM, "events.log", files={"events.log": data}, trace_memory=True)
     assert_lines(result, "  Успешно разобрано: 150 000")
     peak = result.peak_memory
-    assert peak < len(data) / 3, f"пик памяти {peak / 2 ** 20:.1f} МБ при файле {len(data) / 2 ** 20:.1f} МБ — " \
+    assert peak < len(data) / 3, f"пик памяти {peak / 2 ** 20:.1f} МБ при файле {len(data) / 2 ** 20:.1f} МБ - " \
                                  "похоже, файл читается целиком или события складываются в список"
 
 
 @pytest.mark.category("edge")
 def test_5_9_events_out_of_order():
-    """5.9 События не по порядку: итоги как у отсортированного журнала, есть предупреждение."""
     data = (line(START, "LOGIN") + line(START + timedelta(minutes=50), "VIEW")
             + line(START + timedelta(minutes=10), "CART") + line(START + timedelta(minutes=70), "VIEW")
             + line(START + timedelta(minutes=5), "ERROR"))
@@ -132,17 +113,14 @@ def test_5_9_events_out_of_order():
 @pytest.mark.category("edge")
 @pytest.mark.parametrize("copies", [2, 3, 10])
 def test_5_10_duplicates_are_counted_separately(copies):
-    """5.10 Повторяющиеся события учитываются как отдельные."""
     data = line(START, "ERROR", "code=500") * copies + line(START + timedelta(minutes=1), "VIEW")
     check(data)
 
 
-# ============================================================ ❌ Формат
 @pytest.mark.category("format")
 @pytest.mark.parametrize("bad", ["[битая строка без разделителей]", "2026-11-05 08:00:00 LOGIN",
                                  "2026-11-05 08:00:00 | ", "| LOGIN | user=1", "2026-11-05 08:00:00 | 123ABC"])
 def test_5_11_line_without_separators(bad):
-    """5.11 Строка без разделителей (или без типа) пропускается и попадает в примеры битых с номером."""
     data = line(START, "LOGIN") + "\n" + bad + "\n" + line(START + timedelta(minutes=5), "VIEW")
     check(data)
     assert_lines(analyze(data), f"  строка 3: {bad}")
@@ -153,23 +131,19 @@ def test_5_11_line_without_separators(bad):
                                    "2026-11-05 08:60:00", "2026-11-05 08:00:60", "2026-11-31 08:00:00",
                                    "26-11-05 08:00:00", "2026-11-05 8:00:00"])
 def test_5_12_invalid_dates(stamp):
-    """5.12 Невалидная дата или время — строка пропускается."""
     check(line(START, "VIEW") + f"{stamp} | LOGIN\n")
 
 
 @pytest.mark.category("format")
 @pytest.mark.parametrize("junk", [b"\x00\x01\x02", b"\xff\xfe\xfd binary", b"\x89PNG\r\n\x1a\n", b"\xc3\x28"])
 def test_5_13_binary_data_in_text_file(junk):
-    """5.13 Двоичные данные внутри текстового файла не роняют программу."""
     data = line(START, "LOGIN").encode() + junk + b"\n" + line(START + timedelta(minutes=2), "VIEW").encode()
     check(data)
 
 
-# ============================================================ 🎲 Фаззинг
 @pytest.mark.category("fuzz")
 @pytest.mark.parametrize("seed", [1, 2, 3])
 def test_5_15_random_lines_some_broken(seed):
-    """5.15 10 000 случайных строк, часть битые: в отчёт попадают только корректные события."""
     rng = random.Random(seed)
     kinds = ["LOGIN", "VIEW", "ERROR", "CART"]
     moment, parts = START, []
@@ -185,7 +159,6 @@ def test_5_15_random_lines_some_broken(seed):
 @pytest.mark.category("fuzz")
 @pytest.mark.parametrize("seed", [11, 12])
 def test_5_16_random_separators_and_spacing(seed):
-    """5.16 Случайные разделители и пробелы: корректные строки разбираются, смешанные — битые."""
     rng = random.Random(seed)
     parts = []
     for i in range(500):
@@ -196,5 +169,3 @@ def test_5_16_random_separators_and_spacing(seed):
         parts.append(f"{space()}{stamp}{space()}{first}{space()}{rng.choice(['VIEW', 'err', 'Log_1'])}"
                      f"{description}{space()}\n")
     check("".join(parts))
-
-

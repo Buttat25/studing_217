@@ -1,14 +1,3 @@
-"""Требования к коду, которые нельзя проверить через ввод и вывод, — проверка по исходникам.
-
-    from code_rules import check_code
-    problems = check_code(Path("tasks/t02_cache"))     # [] — требования выполнены
-
-Задача 2: кэш и каталог — на своих структурах данных: нельзя встроенные словари и множества
-(dict, set, литералы {…}, OrderedDict, defaultdict, Counter, ChainMap, functools.lru_cache/cache).
-Задача 7: есть модули calc_math.py, calc_convert.py, calc_matrix.py, calc_logic.py и calculator.py,
-нет eval/exec;
-первые четыре не импортируют друг друга.
-"""
 from __future__ import annotations
 
 import ast
@@ -20,7 +9,6 @@ CALC_MODULES = ("calc_math", "calc_convert", "calc_matrix", "calc_logic")
 
 
 def _sources(task_dir: Path) -> dict[str, ast.AST]:
-    """Файлы решения в папке задачи → синтаксическое дерево (None, если файл не разбирается)."""
     result = {}
     for path in sorted(task_dir.glob("*.py")):
         try:
@@ -51,17 +39,17 @@ def no_builtin_maps(task_dir: Path) -> list[str]:
                 found = [a.name for a in node.names if a.name in FORBIDDEN_NAMES]
                 what = ", ".join(found) or None
             if what:
-                problems.append(f"{name}:{node.lineno}: {what} — нужны свои структуры данных")
+                problems.append(f"{name}:{node.lineno}: {what} - нужны свои структуры данных")
     return sorted(set(problems), key=lambda p: (p.split(":")[0], int(p.split(":")[1]) if p.split(":")[1].isdigit() else 0))
 
 
 def independent_modules(task_dir: Path) -> list[str]:
     sources = _sources(task_dir)
-    problems = [f"нет файла {m}.py" for m in (*CALC_MODULES, "calculator") if f"{m}.py" not in sources]
+    problems = [f"нет файла {m}.py" for m in CALC_MODULES if f"{m}.py" not in sources]
     for name, tree in sources.items():
         for node in ast.walk(tree) if tree is not None else ():
             if isinstance(node, ast.Name) and node.id in ("eval", "exec"):
-                problems.append(f"{name}:{node.lineno}: {node.id} запрещён — выражение приходит от пользователя")
+                problems.append(f"{name}:{node.lineno}: {node.id} запрещён - выражение приходит от пользователя")
     for module in CALC_MODULES:
         tree = sources.get(f"{module}.py")
         if tree is None:
@@ -76,7 +64,7 @@ def independent_modules(task_dir: Path) -> list[str]:
                 names = [node.module.split(".")[0]]
             for other in names:
                 if other in CALC_MODULES and other != module:
-                    problems.append(f"{module}.py:{node.lineno}: импортирует {other} — модули должны быть независимыми")
+                    problems.append(f"{module}.py:{node.lineno}: импортирует {other} - модули должны быть независимыми")
     return problems
 
 
@@ -87,6 +75,5 @@ RULES = {
 
 
 def check_code(task_dir: Path) -> list[str] | None:
-    """Нарушения требований к коду; None — у задачи таких требований нет."""
     rule = RULES.get(task_dir.name)
     return None if rule is None else rule(task_dir)

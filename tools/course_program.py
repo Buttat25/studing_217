@@ -1,20 +1,3 @@
-"""Запуск программы для тестов «ввод → вывод».
-
-Тесты не импортируют функции решения: они запускают программу так же, как из командной строки
-(`python trains.py schedule.txt`), подают ей ввод и сравнивают результат.
-
-    from course_program import run, assert_output, assert_error
-
-    result = run("trains.py", "schedule.txt", files={"schedule.txt": "..."})
-    assert_output(result, '''
-        Минимальное количество платформ: 1
-        ...
-    ''')
-    assert_error(run("trains.py", stdin="мусор"), "мусор")
-
-Программа выполняется в том же процессе (как `python файл.py`: `__name__ == "__main__"`,
-свои sys.argv, sys.stdin, sys.stdout, sys.stderr и текущая папка), поэтому тесты быстрые.
-"""
 from __future__ import annotations
 
 import difflib
@@ -36,16 +19,16 @@ import tracemalloc
 from dataclasses import dataclass
 from pathlib import Path
 
-WILDCARD = "…"          # в ожидаемой строке — любой текст
+WILDCARD = "…"
 
 
 @dataclass
 class Result:
-    code: int            # код возврата (0 — успех)
-    out: str             # stdout, без пробелов в конце строк и пустых строк в конце
-    err: str             # stderr
-    seconds: float       # время работы
-    peak_memory: int | None = None    # пик памяти, байты (если просили trace_memory)
+    code: int
+    out: str
+    err: str
+    seconds: float
+    peak_memory: int | None = None
 
     @property
     def lines(self) -> list[str]:
@@ -56,13 +39,48 @@ class Result:
         return "Traceback (most recent call last)" in self.err
 
 
+MAIN_GUARD = re.compile(r"""^if\s+__name__\s*==\s*['"]__main__['"]\s*:""", re.M)
+
+
+def locate_program(folder, name: str) -> Path | None:
+    folder = Path(folder)
+    if (folder / name).is_file():
+        return folder / name
+    candidates = sorted(p for p in folder.glob("*.py")
+                        if p.is_file() and not p.name.startswith("test_") and p.name != "conftest.py")
+    if len(candidates) == 1:
+        return candidates[0]
+    mains = [p for p in candidates if MAIN_GUARD.search(p.read_text(encoding="utf-8-sig", errors="replace"))]
+    return mains[0] if len(mains) == 1 else None
+
+
+def _caller_task_dir() -> Path | None:
+    here = Path(__file__).resolve()
+    frame = sys._getframe(1)
+    while frame is not None:
+        file = Path(frame.f_code.co_filename)
+        if file.name.startswith("test_") and file.resolve() != here and file.parent.name == "tests":
+            return file.resolve().parent.parent
+        frame = frame.f_back
+    return None
+
+
 def find_program(name: str) -> Path:
-    code_dir = os.environ.get("COURSE_CODE_DIR")
-    places = [code_dir] if code_dir else sys.path        # при проверке — только папка решения
-    for place in places:
-        if place and (Path(place) / name).is_file():
-            return Path(place) / name
-    raise AssertionError(f"Не найден файл программы {name} — создайте его в папке задачи")
+    code_dir = os.environ.get("COURSE_CODE_DIR") or _caller_task_dir()
+    if code_dir:
+        found = locate_program(code_dir, name)
+        if found:
+            return found
+        others = [p.name for p in Path(code_dir).glob("*.py") if not p.name.startswith("test_")]
+        if len(others) > 1:
+            raise AssertionError(f"Не найдена программа {name}: в папке задачи несколько файлов "
+                                 f"({', '.join(sorted(others))}) - назовите программу {name} или оставьте "
+                                 "`if __name__ == \"__main__\":` только в ней")
+    else:
+        for place in sys.path:
+            if place and (Path(place) / name).is_file():
+                return Path(place) / name
+    raise AssertionError(f"Не найден файл программы {name} - создайте его в папке задачи")
 
 
 def _normalize(text: str) -> str:
@@ -73,7 +91,6 @@ def _normalize(text: str) -> str:
 
 
 def _forget_modules(folder: Path):
-    """Модули решения импортируются заново при каждом запуске — как в новом процессе."""
     target = os.path.normcase(str(folder))
     for name, module in list(sys.modules.items()):
         file = getattr(module, "__file__", None)
@@ -83,20 +100,9 @@ def _forget_modules(folder: Path):
 
 def run(program: str, *args, stdin: str | bytes = "", files: dict | None = None,
         trace_memory: bool = False, cwd=None) -> Result:
-    """Запустить программу: `python program args...` с вводом stdin в отдельной временной папке.
-
-    files — файлы, которые нужно создать в этой папке перед запуском: {имя: текст или bytes}.
-    cwd — запустить в этой папке (она не удаляется: так можно прочитать файлы, которые создала
-    программа, и передать их следующему запуску).
-    trace_memory — замерить пик памяти программы (Result.peak_memory, байты, через tracemalloc).
-
-    Обычно программа выполняется в том же процессе (быстро). При COURSE_ISOLATED=1 (так проверяет
-    преподаватель) — в отдельном процессе python с тайм-аутом COURSE_RUN_TIMEOUT секунд: программа
-    не может повлиять на тесты, а зависшая программа обрывается.
-    """
     path = find_program(program).resolve()
     data = stdin.encode("utf-8") if isinstance(stdin, str) else stdin
-    if cwd is not None:                                   # папка, которая остаётся после запуска
+    if cwd is not None:
         Path(cwd).mkdir(parents=True, exist_ok=True)
         return _start(path, [str(a) for a in args], data, str(cwd), files, trace_memory)
     with tempfile.TemporaryDirectory(prefix="course-run-") as workdir:
@@ -113,7 +119,6 @@ def _start(path: Path, args: list[str], data: bytes, workdir: str, files, trace_
     return _run_here(path, args, data, workdir, trace_memory)
 
 
-# Запуск в отдельном процессе: как `python program`, но с замером памяти по запросу.
 _LAUNCHER = """
 import os, runpy, sys, tracemalloc
 path = sys.argv[1]
@@ -143,7 +148,7 @@ def _run_isolated(path: Path, args: list[str], data: bytes, workdir: str, trace_
         proc = subprocess.run([sys.executable, "-c", _LAUNCHER, str(path), *args], input=data,
                               capture_output=True, cwd=workdir, env=env, timeout=timeout)
     except subprocess.TimeoutExpired:
-        raise AssertionError(f"Программа работала дольше {timeout:g} с — зависла или слишком медленная") from None
+        raise AssertionError(f"Программа работала дольше {timeout:g} с - зависла или слишком медленная") from None
     seconds = time.perf_counter() - start
     peak = None
     if trace_memory and trace_file.exists():
@@ -178,7 +183,7 @@ def _run_here(path: Path, args: list[str], data: bytes, workdir: str, trace_memo
         else:
             print(exit_.code, file=sys.stderr)
             code = 1
-    except BaseException:          # noqa: BLE001 — падение программы тоже результат
+    except BaseException:
         traceback.print_exc()
         code = 1
     finally:
@@ -190,7 +195,7 @@ def _run_here(path: Path, args: list[str], data: bytes, workdir: str, trace_memo
         for stream in streams:
             try:
                 stream.flush()
-                stream.detach()          # иначе при сборке мусора закроется и сам буфер
+                stream.detach()
             except ValueError:
                 pass
         os.chdir(cwd)
@@ -199,10 +204,6 @@ def _run_here(path: Path, args: list[str], data: bytes, workdir: str, trace_memo
                   _normalize(err_buffer.getvalue().decode("utf-8", "replace")), seconds, peak)
 
 
-# ------------------------------------------------------------ записанные ответы моделей
-# В контрольных тестах ожидаемый вывод строят независимые модели (по сути, простые решения).
-# Чтобы не раздавать их студентам, make_public.py записывает ответы моделей на данные открытых
-# тестов в golden.json.gz, а в открытой копии модуля функции модели заменяются поиском по записи.
 GOLDEN_FILE = "golden.json.gz"
 
 
@@ -217,12 +218,11 @@ def _golden_key(name: str, args, kwargs) -> str:
 
 
 def golden(func):
-    """Декоратор для функций модели: при COURSE_GOLDEN_RECORD записывает их ответы."""
     name = f"{func.__module__}.{func.__name__}"
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        result = json.loads(json.dumps(func(*args, **kwargs)))      # кортежи → списки, как после записи
+        result = json.loads(json.dumps(func(*args, **kwargs)))
         record = os.environ.get("COURSE_GOLDEN_RECORD")
         if record:
             with open(record, "a", encoding="utf-8") as file:
@@ -236,7 +236,6 @@ _GOLDEN_CACHE: dict = {}
 
 
 def golden_lookup(module_file: str, name: str):
-    """Функция-замена для открытых тестов: отдаёт записанный ответ модели."""
     path = Path(module_file).with_name(GOLDEN_FILE)
 
     def lookup(*args, **kwargs):
@@ -246,7 +245,7 @@ def golden_lookup(module_file: str, name: str):
         try:
             return json.loads(json.dumps(_GOLDEN_CACHE[path][_golden_key(name, args, kwargs)]))
         except KeyError:
-            raise AssertionError(f"Нет записанного ожидаемого ответа ({name}) — не меняйте тесты; "
+            raise AssertionError(f"Нет записанного ожидаемого ответа ({name}) - не меняйте тесты; "
                                  "если тесты обновлялись, возьмите свежую версию папки tests/") from None
 
     lookup.__name__ = name.rsplit(".", 1)[-1]
@@ -274,7 +273,6 @@ def _show(result: Result) -> str:
 
 
 def assert_output(result: Result, expected, code: int = 0):
-    """Программа завершилась с кодом code и вывела ровно expected (строка в строку)."""
     want = expected_lines(expected)
     got = result.lines
     same = len(want) == len(got) and all(line_matches(w, g) for w, g in zip(want, got))
@@ -286,7 +284,6 @@ def assert_output(result: Result, expected, code: int = 0):
 
 
 def assert_lines(result: Result, *expected: str):
-    """В выводе есть эти строки (в этом порядке, между ними могут быть другие)."""
     position = 0
     for want in (line.rstrip() for line in expected):
         for index in range(position, len(result.lines)):
@@ -301,7 +298,6 @@ def assert_lines(result: Result, *expected: str):
 
 
 def assert_error(result: Result, *fragments: str, code: int = 1):
-    """Программа сообщила об ошибке: код возврата code, в stderr строка «Ошибка: ...» с fragments."""
     problem = ""
     if result.crashed:
         problem = "программа упала с исключением вместо понятного сообщения об ошибке"

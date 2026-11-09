@@ -1,9 +1,3 @@
-# Вспомогательный модуль открытых тестов. Сгенерировано — не редактируйте.
-# Ожидаемые ответы записаны в golden.json.gz.
-"""Независимая модель очереди для тестов задачи 4 (простая, без оптимизаций).
-
-Это не тест, а вспомогательный модуль: тесты сравнивают вывод программы с отчётом этой модели.
-"""
 import math
 
 from course_program import golden_lookup
@@ -20,7 +14,6 @@ def customers_text(people):
 
 
 def parse_report(lines):
-    """Числа из отчёта: пришло, обслужено, ушло, список (обслужил, загрузка%) по кассирам."""
     def value(prefix):
         line = next(l for l in lines if l.startswith(prefix))
         return line[len(prefix):]

@@ -1,11 +1,3 @@
-# Открытые тесты для самопроверки. Сгенерировано из контрольных тестов —
-# не редактируйте: контрольные тесты преподавателя проверяют больше случаев.
-"""Задача 1. Тест-кейсы 1.1–1.17: программа запускается, получает расписание, выводит отчёт.
-
-Договорённость курса: отправление раньше прибытия — поезд уходит на следующие сутки, но стоянка
-не дольше 2 часов. Поэтому 23:30–00:30 — час через полночь (кейс 1.8), а 10:00–09:00 — стоянка
-23 часа, ошибка (кейс 1.12).
-"""
 import random
 import string
 
@@ -18,7 +10,6 @@ PROGRAM = "trains.py"
 
 
 def schedule(*spans) -> str:
-    """Текст расписания: «Поезд N: прибытие ЧЧ:ММ, отправление ЧЧ:ММ»."""
     return "".join(f"Поезд {i}: прибытие {a}, отправление {d}\n" for i, (a, d) in enumerate(spans, 1))
 
 
@@ -34,7 +25,6 @@ def check(*spans):
     assert_output(run(PROGRAM, stdin=schedule(*spans)), report(*spans))
 
 
-# ============================================================ 🟢 Типичные
 @pytest.mark.category("typical")
 @pytest.mark.parametrize("spans", [
     [("09:00", "10:00"), ("11:00", "12:00")],
@@ -43,7 +33,6 @@ def check(*spans):
     [("10:00", "10:05"), ("10:10", "10:15"), ("10:20", "10:25"), ("10:30", "10:35")],
 ])
 def test_1_1_trains_do_not_overlap(spans):
-    """1.1 Поезда не пересекаются — хватает одной платформы."""
     assert report(*spans)[0] == "Минимальное количество платформ: 1"
     check(*spans)
 
@@ -56,21 +45,18 @@ def test_1_1_trains_do_not_overlap(spans):
     [("18:00", "19:00"), ("18:10", "18:20"), ("18:30", "18:40")],
 ])
 def test_1_2_two_trains_overlap(spans):
-    """1.2 В какой-то момент на станции два поезда — нужны 2 платформы."""
     assert report(*spans)[0] == "Минимальное количество платформ: 2"
     check(*spans)
 
 
-# ============================================================ 🟡 Наивные
 @pytest.mark.category("naive")
 @pytest.mark.parametrize("spans", [
     [("09:00", "09:30"), ("09:30", "10:00")],
     [("08:00", "08:20"), ("08:20", "08:40"), ("08:40", "09:00"), ("09:00", "09:20")],
     [("23:00", "23:30"), ("23:30", "24:00")],
-    [("09:30", "10:00"), ("09:00", "09:30")],                # порядок во входных данных обратный
+    [("09:30", "10:00"), ("09:00", "09:30")],
 ])
 def test_1_4_arrival_at_departure_moment(spans):
-    """1.4 Прибытие ровно в момент отправления — платформа уже свободна."""
     assert report(*spans)[0] == "Минимальное количество платформ: 1"
     check(*spans)
 
@@ -78,7 +64,6 @@ def test_1_4_arrival_at_departure_moment(spans):
 @pytest.mark.category("naive")
 @pytest.mark.parametrize("span", [("09:00", "09:30"), ("22:00", "24:00"), ("23:50", "00:10"), ("12:00", "12:01")])
 def test_1_5_single_train(span):
-    """1.5 Один поезд — одна платформа."""
     assert_output(run(PROGRAM, stdin=schedule(span)), f"""
         Минимальное количество платформ: 1
 
@@ -87,11 +72,9 @@ def test_1_5_single_train(span):
     """)
 
 
-# ============================================================ 🔴 Краевые
 @pytest.mark.category("edge")
 @pytest.mark.parametrize("text", ["", "\n\n", "# пустое расписание\n", "   \n# комментарий\n\n"])
 def test_1_7_empty_schedule(text):
-    """1.7 Пустое расписание — 0 платформ, распределения нет."""
     assert_output(run(PROGRAM, stdin=text), "Минимальное количество платформ: 0")
 
 
@@ -103,14 +86,12 @@ def test_1_7_empty_schedule_file():
 @pytest.mark.category("edge")
 @pytest.mark.parametrize("time_", ["09:00", "00:00", "23:59", "12:30"])
 def test_1_9_zero_stay_is_an_error(time_):
-    """1.9 Нулевая длительность стоянки — ошибка."""
     assert_error(run(PROGRAM, stdin=schedule(("08:00", "08:30"), (time_, time_))))
 
 
 @pytest.mark.category("edge")
 @pytest.mark.parametrize("seed, max_stay", [(1, 30), (2, 120)])
 def test_1_10_ten_thousand_trains_fast(seed, max_stay):
-    """1.10 10 000 поездов — меньше секунды, отчёт верный."""
     rng = random.Random(seed)
     spans = []
     for _ in range(10_000):
@@ -121,19 +102,15 @@ def test_1_10_ten_thousand_trains_fast(seed, max_stay):
     assert result.seconds < 1, f"{result.seconds:.2f} с"
 
 
-# ============================================================ ❌ Формат
-
-
 @pytest.mark.category("format")
 @pytest.mark.parametrize("spans", [
-    [("10:00", "09:00")],                                     # стоянка 23 часа
-    [("18:00", "06:00")],                                     # 12 часов
-    [("23:00", "01:01")],                                     # 2 ч 01 мин через полночь
+    [("10:00", "09:00")],
+    [("18:00", "06:00")],
+    [("23:00", "01:01")],
     [("12:00", "11:59")],
-    [("08:00", "08:30"), ("12:00", "13:00"), ("15:00", "14:00")],   # ошибка не первым поездом
+    [("08:00", "08:30"), ("12:00", "13:00"), ("15:00", "14:00")],
 ])
 def test_1_12_departure_before_arrival_is_an_error(spans):
-    """1.12 Отправление раньше прибытия, и это не короткая стоянка через полночь — ошибка."""
     assert_error(run(PROGRAM, stdin=schedule(*spans)))
 
 
@@ -143,7 +120,6 @@ def test_1_12_departure_before_arrival_is_an_error(spans):
     ("09:00", "25:00"), ("09:00", "24:01"),
 ])
 def test_1_13_time_out_of_range(arrival, departure):
-    """1.13 Часы или минуты вне диапазона."""
     assert_error(run(PROGRAM, stdin=schedule((arrival, departure))))
 
 
@@ -155,15 +131,12 @@ def test_1_13_time_out_of_range(arrival, departure):
     "Поезд 1: прибытие 09:00,",
 ])
 def test_1_14_missing_departure(line):
-    """1.14 Нет времени отправления."""
     assert_error(run(PROGRAM, stdin=line + "\n"))
 
 
-# ============================================================ 🎲 Фаззинг
 @pytest.mark.category("fuzz")
 @pytest.mark.parametrize("seed", [11, 12, 13])
 def test_1_15_thousand_random_trains(seed):
-    """1.15 1000 случайных поездов: отчёт совпадает с независимым подсчётом."""
     rng = random.Random(seed)
     spans = []
     for _ in range(1000):
@@ -175,11 +148,10 @@ def test_1_15_thousand_random_trains(seed):
 @pytest.mark.category("fuzz")
 @pytest.mark.parametrize("seed", [31, 32])
 def test_1_17_random_strings_instead_of_time(seed):
-    """1.17 Случайные строки вместо времени — всегда ошибка, программа не падает."""
     rng = random.Random(seed)
     alphabet = string.ascii_letters + string.digits + string.punctuation.replace(":", "").replace(",", "") + "абвгдё"
     for _ in range(300):
         bad = "".join(rng.choice(alphabet) for _ in range(rng.randint(1, 12)))
-        if rng.random() < 0.3:                      # с двоеточием, но с мусором
+        if rng.random() < 0.3:
             bad = f"{rng.choice('ab9')}{rng.randint(0, 9)}:{rng.choice(['x1', '5', '123', 'zz'])}"
         assert_error(run(PROGRAM, stdin=f"Поезд 1: прибытие {bad}, отправление 10:00\n"))

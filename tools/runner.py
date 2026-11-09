@@ -1,8 +1,3 @@
-"""Общий запуск тестов для check.py (студент) и grade.py (преподаватель).
-
-Тесты копируются во временную папку и запускаются в отдельном процессе:
-решение не может «подправить» тесты, зависшее решение обрывается по тайм-ауту.
-"""
 from __future__ import annotations
 
 import json
@@ -18,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TASKS_DIR = ROOT / "tasks"
-TIMEOUT = 300                       # секунд на один запуск pytest
+TIMEOUT = 300
 
 PYTEST_INI = """\
 [pytest]
@@ -27,7 +22,6 @@ markers =
     category(name): категория тест-кейса (typical, naive, edge, format, fuzz)
 """
 
-# Категория теста (маркер category) записывается в JUnit-отчёт как свойство теста.
 CATEGORY_PLUGIN = '''\
 def pytest_collection_modifyitems(items):
     for item in items:
@@ -59,12 +53,12 @@ exclude_also =
 class TestRun:
     total: int = 0
     passed: int = 0
-    failed: list = field(default_factory=list)      # имена упавших тестов
+    failed: list = field(default_factory=list)
     timeout: bool = False
-    crashed: str = ""                               # pytest не смог даже собрать тесты
+    crashed: str = ""
     coverage: float | None = None
     output: str = ""
-    by_category: dict = field(default_factory=dict)  # категория → [пройдено, всего]
+    by_category: dict = field(default_factory=dict)
 
     @property
     def ok(self) -> bool:
@@ -76,7 +70,6 @@ class TestRun:
                 "by_category": self.by_category}
 
     def category_report(self, title: str) -> str:
-        """Отчёт в формате курса: 'Задача 1:', '- Типичные: 3/3 ✓', ..., 'Итого: 17/17'."""
         lines = [f"{title}:"]
         keys = list(CATEGORIES) + sorted(set(self.by_category) - set(CATEGORIES))
         for key in keys:
@@ -105,7 +98,6 @@ def find_task(selector: str, base: Path = TASKS_DIR) -> Path:
 
 
 def module_files(task_dir: Path) -> list[Path]:
-    """Файлы решения: все .py в корне папки задачи."""
     return sorted(p for p in task_dir.glob("*.py") if not p.name.startswith("test_"))
 
 
@@ -131,12 +123,6 @@ def _parse_junit(path: Path, result: TestRun):
 
 def run_tests(test_files, code_dir: Path, *, coverage: bool = False, timeout: int = TIMEOUT,
               verbose: bool = False, extra_env: dict | None = None, import_code: bool = False) -> TestRun:
-    """Запустить тесты test_files против кода из code_dir.
-
-    Тесты курса запускают программу (course_program.run) и не импортируют код решения, поэтому
-    папки решения нет в пути импорта: файл студента не может подменить модули тестов.
-    import_code=True — тесты импортируют модули из code_dir (учебные программы git-заданий).
-    """
     result = TestRun()
     test_files = [Path(f) for f in test_files]
     if not test_files:
@@ -147,7 +133,7 @@ def run_tests(test_files, code_dir: Path, *, coverage: bool = False, timeout: in
         tests.mkdir()
         for f in test_files:
             shutil.copy2(f, tests / f.name)
-        for folder in {f.parent for f in test_files}:       # вспомогательные модули тестов
+        for folder in {f.parent for f in test_files}:
             for helper in [*folder.glob("*.py"), *folder.glob("golden.json.gz")]:
                 if not helper.name.startswith("test_") and helper.name != "conftest.py":
                     shutil.copy2(helper, tests / helper.name)
@@ -186,6 +172,5 @@ def run_tests(test_files, code_dir: Path, *, coverage: bool = False, timeout: in
 
 
 def coverage_table(output: str) -> str:
-    """Таблица покрытия из вывода pytest-cov (для подсказки, какие строки не покрыты)."""
     match = re.search(r"(Name\s+Stmts.*?TOTAL[^\n]*)", output, re.S)
     return match.group(1) if match else ""

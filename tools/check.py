@@ -1,16 +1,3 @@
-"""Самопроверка и подготовка решения к сдаче.
-
-    python tools/check.py 1            # задача 1: тесты из tasks/t01_*/tests/
-    python tools/check.py all          # все задачи, сводная таблица
-    python tools/check.py 3 -v         # подробно: какие тесты упали и почему
-    python tools/check.py submit --name "Иванов Иван"   # архив для отправки преподавателю
-
-Тесты уже готовы и лежат в репозитории — писать свои не нужно. Они запускают вашу программу
-(например, tasks/t01_trains/trains.py), подают ей ввод и сравнивают вывод. Открытые тесты
-(tasks/tNN_*/tests/) — часть контрольных: преподаватель проверяет решение полным набором,
-в котором есть и случаи, которых в открытых тестах нет. Поэтому внимательно читайте
-договорённости в README задачи.
-"""
 from __future__ import annotations
 
 import argparse
@@ -23,15 +10,15 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from code_rules import check_code  # noqa: E402
-from runner import ROOT, TASKS_DIR, find_task, module_files, run_tests, task_dirs  # noqa: E402
+from code_rules import check_code
+from course_program import locate_program
+from runner import ROOT, TASKS_DIR, find_task, module_files, run_tests, task_dirs
 
 
-DETAIL_LINES = 120               # сколько строк разбора падений показывать с -v
+DETAIL_LINES = 120
 
 
 def required_programs(task_dir: Path) -> list[str]:
-    """Файлы программ, которые запускают тесты задачи (строка PROGRAM = "trains.py")."""
     names = set()
     for test in (task_dir / "tests").glob("test_*.py"):
         names |= set(re.findall(r'^PROGRAM\s*=\s*"([^"]+)"', test.read_text(encoding="utf-8"), re.M))
@@ -39,7 +26,7 @@ def required_programs(task_dir: Path) -> list[str]:
 
 
 def check_task(task_dir: Path, verbose: bool) -> dict:
-    missing = [name for name in required_programs(task_dir) if not (task_dir / name).exists()]
+    missing = [name for name in required_programs(task_dir) if locate_program(task_dir, name) is None]
     public = run_tests(sorted((task_dir / "tests").glob("test_*.py")), task_dir, verbose=verbose)
     code = None if missing else check_code(task_dir)
     return {"task": task_dir.name, "public": public, "missing": missing, "code": code}
@@ -50,7 +37,6 @@ def task_title(task_name: str) -> str:
 
 
 def text_report(results: list[dict]) -> str:
-    """Отчёт о прохождении тестов в формате курса (по категориям)."""
     blocks = []
     for result in results:
         public = result["public"]
@@ -67,16 +53,22 @@ def text_report(results: list[dict]) -> str:
 def describe(result: dict, verbose: bool) -> list[str]:
     public = result["public"]
     lines = [f"== {result['task']} =="]
+    files = sorted(p.name for p in module_files(ROOT / "tasks" / result["task"]))
+    if result["missing"] and len(files) > 1:
+        lines.append(f"  Не найдена программа {', '.join(result['missing'])}: в папке несколько файлов "
+                     f"({', '.join(files)}) - назовите программу как в README или оставьте "
+                     "`if __name__ == \"__main__\":` только в ней")
+        return lines
     if result["missing"]:
         many = len(result["missing"]) > 1
-        lines.append(f"  {'Нет файлов' if many else 'Нет файла'}: {', '.join(result['missing'])} — "
+        lines.append(f"  {'Нет файлов' if many else 'Нет файла'}: {', '.join(result['missing'])} - "
                      f"{'создайте их' if many else 'создайте его'} в папке tasks/{result['task']} "
                      "по разделу «Программа» в README задачи")
         return lines
     if public.timeout:
-        lines.append("  Тесты: превышено время — где-то бесконечный цикл или очень медленный алгоритм")
+        lines.append("  Тесты: превышено время - где-то бесконечный цикл или очень медленный алгоритм")
     elif public.crashed:
-        lines.append(f"  Тесты: не запустились — {public.crashed}")
+        lines.append(f"  Тесты: не запустились - {public.crashed}")
     else:
         lines += ["  " + row for row in public.category_report(task_title(result["task"])).splitlines()]
         for name in public.failed[: None if verbose else 5]:
@@ -150,7 +142,7 @@ def cmd_submit(name: str, out_dir: Path) -> int:
             print("  " + summary_row(result))
             for path in module_files(task_dir):
                 zf.write(path, f"{task_dir.name}/{path.name}")
-        text = f"Отчёт о прохождении открытых тестов — {name.strip()}\n\n{text_report(results)}\n"
+        text = f"Отчёт о прохождении открытых тестов - {name.strip()}\n\n{text_report(results)}\n"
         zf.writestr("report.json", json.dumps(report, ensure_ascii=False, indent=2))
         zf.writestr("report.txt", text)
     report_path = archive.with_suffix(".txt")
@@ -158,7 +150,7 @@ def cmd_submit(name: str, out_dir: Path) -> int:
     print("\n" + text)
     print(f"Готово: {archive}")
     print(f"Отчёт: {report_path}")
-    print("Отправьте этот файл преподавателю — он проверит решения контрольными тестами.")
+    print("Отправьте этот файл преподавателю - он проверит решения контрольными тестами.")
     return 0
 
 

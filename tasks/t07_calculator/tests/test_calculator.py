@@ -1,10 +1,3 @@
-# Открытые тесты для самопроверки. Сгенерировано из контрольных тестов —
-# не редактируйте: контрольные тесты преподавателя проверяют больше случаев.
-"""Задача 7. Калькулятор: арифметика, функции, форматирование, конвертер, матрицы, логика, команды.
-
-Программа: python calculator.py — читает строки из stdin, на каждую печатает ответ;
-           python calculator.py "2 + 2" — одна строка, код 1 при ошибке.
-"""
 import pytest
 
 from course_program import assert_output, run
@@ -27,7 +20,6 @@ def is_error(text):
     return text.startswith("ОШИБКА: ") and "\n" not in text
 
 
-# ---------------------------------------------------------------- пример из условия
 @pytest.mark.category("typical")
 def test_example_from_task():
     result = session("2 + 2 * 2", "10 / 0", "log(-5)", "sqrt(16) + 3^2", "convert 5 km to miles",
@@ -62,7 +54,6 @@ def test_example_from_task():
     """)
 
 
-# ---------------------------------------------------------------- арифметика
 @pytest.mark.category("typical")
 @pytest.mark.parametrize("expr, result", [
     ("10 - 4 - 3", "= 3"), ("100 / 10 / 5", "= 2.0"), ("2 ^ 3 ^ 2", "= 512"), ("2^-1", "= 0.5"),
@@ -107,7 +98,6 @@ def test_variables(line, result):
     assert answer(line) == result
 
 
-# ---------------------------------------------------------------- форматирование чисел
 @pytest.mark.category("edge")
 @pytest.mark.parametrize("expr, result", [
     ("2.675 + 0", "= 2.675"), ("1 / 8", "= 0.125"), ("0.1 * 3", "= 0.3"), ("-0.0", "= 0.0"), ("0.0 * -1", "= 0.0"),
@@ -152,7 +142,6 @@ def test_bad_precision(command):
     assert is_error(result.lines[0]) and result.lines[1] == "Текущая точность: 10 знаков после запятой"
 
 
-# ---------------------------------------------------------------- конвертер
 @pytest.mark.category("typical")
 @pytest.mark.parametrize("command, result", [
     ("convert 1 km to m", "= 1000 m"), ("convert 1000 m in km", "= 1 km"), ("convert 1 ft to in", "= 12 in"),
@@ -181,7 +170,6 @@ def test_convert_errors(command):
     assert is_error(answer(command))
 
 
-# ---------------------------------------------------------------- матрицы
 @pytest.mark.category("typical")
 @pytest.mark.parametrize("command, result", [
     ("matrix [[1, 2], [3, 4]] * [[5, 6], [7, 8]]", "= [[19, 22],\n   [43, 50]]"),
@@ -227,7 +215,6 @@ def test_matrix_errors(command):
     assert is_error(answer(command))
 
 
-# ---------------------------------------------------------------- логика
 @pytest.mark.category("typical")
 @pytest.mark.parametrize("line, result", [
     ("NOT (x > 5) AND (y < 10), где x=7, y=3", "= false"),
@@ -258,7 +245,6 @@ def test_logic_errors(line):
     assert is_error(answer(line))
 
 
-# ---------------------------------------------------------------- история, файлы, справка
 @pytest.mark.category("typical")
 def test_history_empty_and_only_calculations():
     assert_output(session("history", "precision 3", "help", "2 + 2", "history"), [
@@ -294,7 +280,6 @@ def test_save_errors(command):
     assert is_error(answer("1 + 1", command))
 
 
-# ---------------------------------------------------------------- запуск
 @pytest.mark.category("typical")
 def test_exit_and_quit_stop_reading():
     assert_output(run(PROGRAM, stdin="1 + 1\nexit\n2 + 2\n"), "= 2")

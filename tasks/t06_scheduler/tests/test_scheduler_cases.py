@@ -1,10 +1,3 @@
-# Открытые тесты для самопроверки. Сгенерировано из контрольных тестов —
-# не редактируйте: контрольные тесты преподавателя проверяют больше случаев.
-"""Задача 6. Тест-кейсы 6.1–6.17: план по списку задач (файл) и операции в диалоге (stdin).
-
-Программа: python scheduler.py ФАЙЛ   — план выполнения или сообщение о цикле;
-           python scheduler.py < команды — диалог.
-"""
 import random
 import string
 
@@ -36,11 +29,9 @@ def cycle_chain(result):
     return result.lines[1][len("Цепочка: "):].split(" → ")
 
 
-# ============================================================ 🟢 Типичные
 @pytest.mark.category("typical")
 @pytest.mark.parametrize("names", [["A", "B", "C", "D"], ["z", "y", "x"], ["deploy", "build", "code", "plan", "idea"]])
 def test_6_1_linear_chain(names):
-    """6.1 Линейная цепочка — порядок по цепочке (даже если имена не по алфавиту)."""
     deps = {names[0]: []}
     for prev, name in zip(names, names[1:]):
         deps[name] = [prev]
@@ -50,7 +41,6 @@ def test_6_1_linear_chain(names):
 @pytest.mark.category("typical")
 @pytest.mark.parametrize("task", ["A", "Задача-1", "deploy_prod"])
 def test_6_3_single_task(task):
-    """6.3 Одна задача без зависимостей."""
     assert_output(from_file({task: []}, {task: "Единственная"}), f"""
         Проверка зависимостей: циклов не обнаружено.
 
@@ -65,10 +55,8 @@ def test_6_3_single_task(task):
     """)
 
 
-# ============================================================ 🟡 Наивные
 @pytest.mark.category("naive")
 def test_6_4_two_task_cycle_in_file():
-    """6.4 Цикл A → B → A — ошибка с цепочкой."""
     deps = {"A": ["B"], "B": ["A"]}
     assert is_cycle(deps, cycle_chain(from_file(deps)))
 
@@ -87,7 +75,6 @@ def test_6_4_two_task_cycle_in_dialog_graph_unchanged():
 @pytest.mark.category("naive")
 @pytest.mark.parametrize("task", ["X", "build"])
 def test_6_5_task_depends_on_itself(task):
-    """6.5 Задача зависит сама от себя — ошибка с цепочкой [X, X]."""
     assert_output(dialog([f"add {task}", f"dep {task} {task}", f"add Y {task} Y", "order"]), f"""
         Задача {task} добавлена
         ОШИБКА: …{task} → {task}…
@@ -96,11 +83,9 @@ def test_6_5_task_depends_on_itself(task):
     """)
 
 
-# ============================================================ 🔴 Краевые
 @pytest.mark.category("edge")
 @pytest.mark.parametrize("missing", ["Z", "задача-призрак"])
 def test_6_7_dependency_on_missing_task(missing):
-    """6.7 Зависимость от несуществующей задачи — ошибка с её именем."""
     assert_error(run(PROGRAM, "tasks.txt", files={"tasks.txt": task_file({"A": [], "B": ["A", missing]})}), missing)
     assert_output(dialog(["add A", f"add B A {missing}", f"dep A {missing}", "order"]), """
         Задача A добавлена
@@ -113,7 +98,6 @@ def test_6_7_dependency_on_missing_task(missing):
 @pytest.mark.category("edge")
 @pytest.mark.parametrize("count", [1000, 5000])
 def test_6_8_many_tasks_depend_on_one(count):
-    """6.8 Тысячи задач зависят от одной — быстро, порядок корректен."""
     deps = {"root": []}
     deps.update({f"t{i:05d}": ["root"] for i in range(count)})
     result = from_file(deps)
@@ -132,7 +116,6 @@ def test_6_9_very_long_chain_without_recursion():
 
 @pytest.mark.category("edge")
 def test_6_10_removing_referenced_task():
-    """6.10 Удаление задачи, на которую ссылаются: отказ, а с --force — удаление вместе со ссылками."""
     assert_output(dialog(["add A", "add B A", "add C B", "remove A", "order", "remove A --force", "ready",
                           "order", "remove C", "order"]), """
         Задача A добавлена
@@ -148,11 +131,9 @@ def test_6_10_removing_referenced_task():
     """)
 
 
-# ============================================================ ❌ Формат
 @pytest.mark.category("format")
-@pytest.mark.parametrize("text", ['Задача : "Пусто" — зависит от: —\n', 'Задача   :"x" — зависит от: —\n'])
+@pytest.mark.parametrize("text", ['Задача : "Пусто" - зависит от: -\n', 'Задача   :"x" - зависит от: -\n'])
 def test_6_11_empty_task_name(text):
-    """6.11 Пустое имя задачи — ошибка."""
     assert_error(run(PROGRAM, "tasks.txt", files={"tasks.txt": text}))
     assert_output(dialog(["add", "add   ", "order"]), """
         ОШИБКА: …
@@ -163,8 +144,7 @@ def test_6_11_empty_task_name(text):
 
 @pytest.mark.category("format")
 def test_6_12_duplicate_names():
-    """6.12 Повтор имени — «задача уже существует», и в диалоге, и в файле."""
-    text = 'Задача A: "Первая" — зависит от: —\nЗадача A: "Вторая" — зависит от: —\n'
+    text = 'Задача A: "Первая" - зависит от: -\nЗадача A: "Вторая" - зависит от: -\n'
     assert_error(run(PROGRAM, "tasks.txt", files={"tasks.txt": text}), "A")
     assert_output(dialog(["add A", "add A", "add B", "add B A", "order"]), """
         Задача A добавлена
@@ -177,24 +157,19 @@ def test_6_12_duplicate_names():
 
 @pytest.mark.category("format")
 @pytest.mark.parametrize("text, fragment", [
-    ('Задача A "Код" — зависит от: —\n', "строка 1"),
-    ('Задача A: "Код" — зависит от: —\nЗадача B: Тесты — зависит от: A\n', "строка 2"),
-    ('Задача A: "Код" — зависит от: —\nЗадача B: "Тесты" зависит от A\n', "строка 2"),
-    ('Задача A: "Код" — зависит от: —\n\nЗадача B: "Тесты" — зависит от: A,, \n', "строка 3"),
-    ('Задача A: "Код" — зависит от: —\nTask B: "Tests" — depends on: A\n', "строка 2"),
+    ('Задача A "Код" - зависит от: -\n', "строка 1"),
+    ('Задача A: "Код" - зависит от: -\nЗадача B: Тесты - зависит от: A\n', "строка 2"),
+    ('Задача A: "Код" - зависит от: -\nЗадача B: "Тесты" зависит от A\n', "строка 2"),
+    ('Задача A: "Код" - зависит от: -\n\nЗадача B: "Тесты" - зависит от: A,, \n', "строка 3"),
+    ('Задача A: "Код" - зависит от: -\nTask B: "Tests" - depends on: A\n', "строка 2"),
 ])
 def test_6_14_bad_syntax(text, fragment):
-    """6.14 Некорректный синтаксис списка задач — ошибка разбора с номером строки."""
     assert_error(run(PROGRAM, "tasks.txt", files={"tasks.txt": text}), fragment)
-
-
-# ============================================================ 🎲 Фаззинг
 
 
 @pytest.mark.category("fuzz")
 @pytest.mark.parametrize("seed", [21, 22])
 def test_6_16_random_names_with_special_characters(seed):
-    """6.16 Случайные имена со спецсимволами (без пробелов и запятых): всё работает."""
     rng = random.Random(seed)
     alphabet = string.ascii_letters + string.digits + "!@#$%^&*()_+-=[]{}<>?/|~№абвгдёЯ😀"
     names = sorted({"".join(rng.choice(alphabet) for _ in range(rng.randint(1, 10))) for _ in range(30)})
@@ -207,7 +182,6 @@ def test_6_16_random_names_with_special_characters(seed):
 @pytest.mark.category("fuzz")
 @pytest.mark.parametrize("seed", [31, 32, 33])
 def test_6_17_random_add_and_remove(seed):
-    """6.17 Случайные добавления и удаления: граф всегда согласован с моделью."""
     rng = random.Random(seed)
     deps, commands, expected = {}, [], []
     for step in range(400):

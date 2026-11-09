@@ -1,11 +1,3 @@
-# Открытые тесты для самопроверки. Сгенерировано из контрольных тестов —
-# не редактируйте: контрольные тесты преподавателя проверяют больше случаев.
-"""Задача 4. Очередь: запуск программы, формат ввода и отчёта, правила обслуживания, ошибки.
-
-Программа: python queue_sim.py [--cashiers N] [--max-queue N|none] [--close T] < покупатели
-           python queue_sim.py [--cashiers N] [--max-queue N|none] --seed S [--minutes M]
-                               [--interval I] [--service МИН-МАКС]
-"""
 import pytest
 
 from course_program import assert_error, assert_output, run
@@ -48,7 +40,6 @@ def test_defaults_three_cashiers_queue_ten_no_closing():
 
 @pytest.mark.category("naive")
 def test_cashier_frees_before_arrival_at_same_moment():
-    """В один момент сначала освобождается касса, потом приходит покупатель — он не ждёт."""
     result = run(PROGRAM, "--cashiers", "1", "--max-queue", "0", stdin="0 5\n5 5\n10 5\n")
     numbers = parse_report(result.lines)
     assert (numbers["served"], numbers["balked"], numbers["max_wait"]) == (3, 0, 0.0)

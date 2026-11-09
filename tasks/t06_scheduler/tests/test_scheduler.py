@@ -1,6 +1,3 @@
-# Открытые тесты для самопроверки. Сгенерировано из контрольных тестов —
-# не редактируйте: контрольные тесты преподавателя проверяют больше случаев.
-"""Задача 6. Планировщик: запуск программы, формат списка задач, отчёт, команды диалога, статусы."""
 import pytest
 
 from course_program import assert_error, assert_output, run
@@ -9,12 +6,12 @@ from scheduler_model import plan
 PROGRAM = "scheduler.py"
 
 EXAMPLE = """\
-Задача A: "Написать код"           — зависит от: —
-Задача B: "Написать тесты"         — зависит от: A
-Задача C: "Собрать проект"         — зависит от: A, B
-Задача D: "Прогнать тесты"         — зависит от: C
-Задача E: "Выкатить на продакшн"   — зависит от: C, D
-Задача F: "Обновить документацию"  — зависит от: E
+Задача A: "Написать код"           - зависит от: -
+Задача B: "Написать тесты"         - зависит от: A
+Задача C: "Собрать проект"         - зависит от: A, B
+Задача D: "Прогнать тесты"         - зависит от: C
+Задача E: "Выкатить на продакшн"   - зависит от: C, D
+Задача F: "Обновить документацию"  - зависит от: E
 """
 
 
@@ -50,7 +47,7 @@ def test_example_from_task():
 
 @pytest.mark.category("typical")
 def test_example_cycle_message():
-    text = 'Задача X: "Икс" — зависит от: Y\nЗадача Y: "Игрек" — зависит от: Z\nЗадача Z: "Зет" — зависит от: X\n'
+    text = 'Задача X: "Икс" - зависит от: Y\nЗадача Y: "Игрек" - зависит от: Z\nЗадача Z: "Зет" - зависит от: X\n'
     result = run(PROGRAM, "tasks.txt", files={"tasks.txt": text})
     assert_output(result, """
         ОШИБКА: обнаружена циклическая зависимость!
@@ -61,9 +58,9 @@ def test_example_cycle_message():
 
 @pytest.mark.category("typical")
 def test_parallel_stages_and_alphabetical_order():
-    text = ('Задача deploy: "Выкатить" — зависит от: test, docs\nЗадача code: "Код" — зависит от: -\n'
-            'Задача test: "Тесты" — зависит от: code\nЗадача docs: "Документация" — зависит от: —\n'
-            'Задача api: "API" — зависит от: code\n')
+    text = ('Задача deploy: "Выкатить" - зависит от: test, docs\nЗадача code: "Код" - зависит от: -\n'
+            'Задача test: "Тесты" - зависит от: code\nЗадача docs: "Документация" - зависит от: -\n'
+            'Задача api: "API" - зависит от: code\n')
     deps = {"deploy": ["test", "docs"], "code": [], "test": ["code"], "docs": [], "api": ["code"]}
     titles = {"deploy": "Выкатить", "code": "Код", "test": "Тесты", "docs": "Документация", "api": "API"}
     assert_output(run(PROGRAM, "tasks.txt", files={"tasks.txt": text}), plan(deps, titles))
@@ -72,7 +69,7 @@ def test_parallel_stages_and_alphabetical_order():
 @pytest.mark.category("edge")
 def test_file_format_details():
     text = ('﻿# список задач\n\n  задача   A :  "Код"  -  ЗАВИСИТ ОТ:   \n'
-            'Задача B: "" — зависит от:  A ,A\n')
+            'Задача B: "" - зависит от:  A ,A\n')
     assert_output(run(PROGRAM, "tasks.txt", files={"tasks.txt": text.encode("utf-8")}), """
         Проверка зависимостей: циклов не обнаружено.
 
@@ -119,7 +116,6 @@ def test_missing_file_and_arguments():
     assert_error(run(PROGRAM, "a.txt", "b.txt", files={"a.txt": EXAMPLE, "b.txt": EXAMPLE}), code=2)
 
 
-# ============================================================ диалог и статусы
 @pytest.mark.category("typical")
 def test_statuses_done_fail_reset():
     commands = ["add A", "add B A", "add C B", "add D", "ready", "done B", "done A", "ready", "status B",
@@ -274,7 +270,6 @@ def test_bad_commands(command):
     """)
 
 
-# ============================================================ дедлайны, сохранение и загрузка
 @pytest.mark.category("typical")
 def test_deadlines_and_overdue():
     commands = ["add A", "add B A", "add C", "deadline A 2026-11-10", "deadline C 2026-11-20",
@@ -341,7 +336,7 @@ def test_saved_file_is_json_and_loads_in_new_run(tmp_path):
     first = run(PROGRAM, stdin="add код\nadd тесты код\nadd выкатка тесты\ndone код\n"
                                "deadline выкатка 2026-12-31\nsave план.json\n", cwd=tmp_path)
     assert first.lines[-1] == "Сохранено в план.json", first.out
-    json.loads((tmp_path / "план.json").read_text(encoding="utf-8"))      # сохраняется именно JSON
+    json.loads((tmp_path / "план.json").read_text(encoding="utf-8"))
     second = run(PROGRAM, stdin="load план.json\nready\norder\nstatus код\noverdue 2027-01-01\n", cwd=tmp_path)
     assert_output(second, """
         Загружено задач: 3
