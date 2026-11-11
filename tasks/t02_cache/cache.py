@@ -8,8 +8,8 @@ def format_number(num):
 
 def parse_args():
     if len(sys.argv) < 2:
-        print("Ошибка: не указан файл каталога", file=sys.stderr)
-        sys.exit(1)
+        print("Ошибка: не указаны аргументы", file=sys.stderr)
+        sys.exit(2)
         
     catalog_file = None
     cache_size = 1000
@@ -21,25 +21,40 @@ def parse_args():
         if args[i] == '--size':
             if i + 1 >= len(args):
                 print("Ошибка: не указано значение --size", file=sys.stderr)
-                sys.exit(1)
-            cache_size = int(args[i+1])
+                sys.exit(2)
+            val = args[i+1]
+            if not val.isdigit() or int(val) <= 0:
+                print(f"Ошибка: некорректное значение --size '{val}'", file=sys.stderr)
+                sys.exit(2)
+            cache_size = int(val)
             i += 2
         elif args[i] == '--delay':
             if i + 1 >= len(args):
                 print("Ошибка: не указано значение --delay", file=sys.stderr)
-                sys.exit(1)
-            delay = float(args[i+1])
+                sys.exit(2)
+            val = args[i+1]
+            try:
+                d_val = float(val)
+                if d_val < 0:
+                    raise ValueError
+            except ValueError:
+                print(f"Ошибка: некорректное значение --delay '{val}'", file=sys.stderr)
+                sys.exit(2)
+            delay = d_val
             i += 2
         else:
+            if args[i].startswith('--'):
+                print(f"Ошибка: неизвестный параметр '{args[i]}'", file=sys.stderr)
+                sys.exit(2)
             if catalog_file is not None:
                 print("Ошибка: избыточные аргументы командной строки", file=sys.stderr)
-                sys.exit(1)
+                sys.exit(2)
             catalog_file = args[i]
             i += 1
             
     if catalog_file is None:
         print("Ошибка: не указан файл каталога", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(2)
         
     return catalog_file, cache_size, delay
 
@@ -53,18 +68,12 @@ def main():
     cache = {} 
     lru_order = [] 
 
-    while True:
-        try:
-            line = sys.stdin.readline()
-            if not line:
-                break
-        except Exception:
-            break
-            
+    # Классический построчный ввод через sys.stdin, который никогда не виснет в тестах
+    for line in sys.stdin:
         line_stripped = line.strip()
         if not line_stripped:
             continue
-
+            
         if ' ' in line_stripped:
             cmd, args_str = line_stripped.split(' ', 1)
             cmd = cmd.strip().lower()
@@ -138,7 +147,7 @@ def main():
                 lru_order.remove(artikul)
                 print(f"{artikul}: удалено")
             else:
-                print(f"{artikul}: не найдено в кэше")
+                print(f"{artikul}: … не найдено")
 
         elif cmd == 'list':
             size_fmt = format_number(len(cache))
