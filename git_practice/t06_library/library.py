@@ -42,11 +42,11 @@ class Library:
         return self._copies[isbn] - on_loan
 
     def find(self, query):
-        query = query.strip()
+        query = query.strip().lower()
         return sorted(isbn for isbn, title in self._titles.items() if query in title.lower())
 
     def borrow(self, isbn, reader, day):
-        if self.available(isbn) < 0:
+        if self.available(isbn) <= 0:
             raise LibraryError(f"нет свободных экземпляров «{self._titles[isbn]}»")
         if (isbn, reader) in self._loans:
             raise LibraryError(f"{reader} уже взял «{self._titles[isbn]}»")
@@ -59,7 +59,7 @@ class Library:
         if day < start:
             raise LibraryError(f"день возврата {day} раньше дня выдачи {start}")
         del self._loans[(isbn, reader)]
-        overdue = day - start - LOAN_DAYS + 1
+        overdue = day - start - LOAN_DAYS
         return max(overdue, 0) * FINE_PER_DAY
 
     def loans_of(self, reader):

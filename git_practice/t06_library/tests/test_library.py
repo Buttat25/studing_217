@@ -40,7 +40,6 @@ def test_find_lowercase_query(lib):
     assert lib.find("гарри") == ["111"]
 
 
-@pytest.mark.skip(reason="временно: разберусь позже")
 def test_find_ignores_case(lib):
     assert lib.find("Гарри") == ["111"]
     assert lib.find("  МАСТЕР ") == ["222"]
@@ -63,7 +62,6 @@ def test_borrow_same_book_twice(lib):
         lib.borrow("111", "Иванов", 2)
 
 
-@pytest.mark.skip(reason="временно отключён")
 def test_cannot_borrow_more_than_copies(lib):
     lib.borrow("222", "Иванов", 1)
     with pytest.raises(LibraryError):
@@ -78,7 +76,6 @@ def test_return_in_time(lib):
     assert lib.loans_of("Иванов") == []
 
 
-@pytest.mark.skip(reason="уточнить у заказчика")
 def test_return_on_last_day_has_no_fine(lib):
     lib.borrow("333", "Иванов", 1)
     assert lib.return_book("333", "Иванов", 15) == 0
